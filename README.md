@@ -23,6 +23,12 @@ If your system does not have SQLite, you can download it from
 You can run `python setup_db.py` manually to perform the initialization at
 any time.
 
+### Auto sign-in
+The dashboard automatically signs in using the default administrator account.
+By default this account uses the username `admin` with password `admin`, so no
+manual login is required. Navigating to the dashboard will log you in
+automatically with these credentials.
+
 ### Other scripts
 - `generate_fake_hits.sh` – send 10 test connections
 - `tests/test_db.py` – run with `pytest`
