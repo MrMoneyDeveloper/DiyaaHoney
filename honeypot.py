@@ -17,6 +17,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from alerts import send_email_alert, send_mqtt_alert, trigger_led
+from db_utils import insert_connection
 
 # ── Paths ────────────────────────────────────────────────────────────────
 BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
@@ -46,11 +47,13 @@ BANNER     = b"SSH-2.0-Honeypot_1.0\r\n"
 
 def handle_client(client_sock: socket.socket, addr):
     ip, port = addr
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = datetime.now()
+    timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
     try:
         logger.info(f"Connection from {ip}:{port}")
         client_sock.sendall(BANNER)
         alert_msg = f"Connection from {ip}:{port} at {timestamp}"
+        insert_connection(ip, port, now)
         send_email_alert(alert_msg)   # real email via alerts.py
         send_mqtt_alert(alert_msg)    # stub / simulated MQTT
         trigger_led(alert_msg)        # stub / simulated LED/Buzzer

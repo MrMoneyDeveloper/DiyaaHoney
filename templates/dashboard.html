@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+<form class="row g-3 mb-3" method="get">
+  <div class="col-md-3">
+    <input type="text" class="form-control" name="ip" placeholder="IP" value="{{ request.args.get('ip','') }}">
+  </div>
+  <div class="col-md-3">
+    <input type="date" class="form-control" name="start" value="{{ request.args.get('start','') }}">
+  </div>
+  <div class="col-md-3">
+    <input type="date" class="form-control" name="end" value="{{ request.args.get('end','') }}">
+  </div>
+  <div class="col-md-2 form-check align-self-center">
+    <input class="form-check-input" type="checkbox" name="alert_only" value="1" {% if request.args.get('alert_only') %}checked{% endif %}>
+    <label class="form-check-label">Alerts only</label>
+  </div>
+  <div class="col-md-1">
+    <button class="btn btn-secondary w-100" type="submit">Filter</button>
+  </div>
+</form>
+
+<input type="text" id="search" class="form-control mb-3" placeholder="Search...">
+
+<table class="table table-striped" id="connTable">
+  <thead>
+    <tr><th>IP</th><th>Port</th><th>Timestamp</th><th>Alert</th></tr>
+  </thead>
+  <tbody>
+    {% for ip, port, ts, message in rows %}
+    <tr>
+      <td>{{ ip }}</td>
+      <td>{{ port }}</td>
+      <td>{{ ts }}</td>
+      <td>{{ message or '' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>
+document.getElementById('search').addEventListener('keyup', function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('#connTable tbody tr').forEach(function(row){
+    row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+  });
+});
+</script>
+{% endblock %}
