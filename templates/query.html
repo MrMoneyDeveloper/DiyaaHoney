@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<form method="post">
+  <div class="mb-3">
+    <textarea class="form-control" name="sql" rows="5">{{ sql }}</textarea>
+  </div>
+  <button class="btn btn-primary" type="submit">Run</button>
+</form>
+{% if rows %}
+<table class="table table-striped mt-3">
+  <thead>
+    <tr>
+      {% for h in headers %}<th>{{ h }}</th>{% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

@@ -1,5 +1,15 @@
 import os
-from flask import Blueprint, Flask, render_template, request, redirect, url_for
+from flask import (
+    Blueprint,
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    jsonify,
+    abort,
+    flash,
+)
 from flask_login import (
     LoginManager,
     login_user,
@@ -8,8 +18,8 @@ from flask_login import (
     UserMixin,
     current_user,
 )
-from sqlalchemy import text
-from db_utils import engine
+from sqlalchemy import text, select, func
+from db_utils import engine, connections
 
 bp = Blueprint("dashboard", __name__, template_folder="templates")
 login_manager = LoginManager()
@@ -90,6 +100,42 @@ def dashboard():
     with engine.connect() as conn:
         rows = conn.execute(query, params).fetchall()
     return render_template("dashboard.html", rows=rows, user=current_user)
+
+
+@bp.route("/stats")
+@login_required
+def stats():
+    stmt = (
+        select(connections.c.ip, func.count().label("hits"))
+        .group_by(connections.c.ip)
+    )
+    with engine.connect() as conn:
+        rows = conn.execute(stmt).all()
+    return jsonify([{"ip": row.ip, "hits": row.hits} for row in rows])
+
+
+@bp.route("/charts")
+@login_required
+def charts():
+    return render_template("charts.html")
+
+
+@bp.route("/query", methods=["GET", "POST"])
+@login_required
+def query():
+    if current_user.role != "admin":
+        abort(403)
+    sql = request.form.get("sql")
+    rows = headers = None
+    if request.method == "POST" and sql:
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text(sql))
+                headers = result.keys()
+                rows = result.fetchall()
+        except Exception as e:
+            flash(str(e), "danger")
+    return render_template("query.html", rows=rows, headers=headers, sql=sql or "")
 
 
 def create_app() -> Flask:
