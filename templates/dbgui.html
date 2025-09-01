@@ -15,9 +15,20 @@ form; results are limited to 100 rows.</p>
     {% endfor %}
   </ul>
 
-<form method="post" class="query-form">
-    <textarea name="query" rows="6" cols="80" placeholder="SELECT * FROM connections LIMIT 10">{{ query or '' }}</textarea><br/>
-    <button type="submit">Run</button>
+<h2>Preset Queries</h2>
+<div class="preset-grid" id="preset-grid">
+    <!-- Buttons built by JS for tooltip + SQL injection -->
+</div>
+
+<form method="post" class="query-form" id="query-form">
+    <textarea id="query" name="query" rows="8" cols="80" placeholder="SELECT * FROM connections LIMIT 10">{{ query or '' }}</textarea>
+    <div class="actions">
+        <label class="toggle"><input type="checkbox" id="auto-run"> Auto‑run on preset</label>
+        <div class="spacer"></div>
+        <button type="button" id="copy-sql" class="btn secondary">Copy SQL</button>
+        <button type="button" id="clear-sql" class="btn muted">Clear</button>
+        <button type="submit" class="btn primary" id="run-btn">Run</button>
+    </div>
   </form>
 
 {% if rows is not none %}
@@ -45,4 +56,76 @@ form; results are limited to 100 rows.</p>
         <p>No rows returned.</p>
     {% endif %}
 {% endif %}
+
+<script>
+// Preset query catalog. Each item gets a color and tooltip with SQL.
+const PRESETS = [
+  {
+    id: 'top-ips', label: 'Top IPs (2025)', color: 'info', breached: false,
+    explain: 'Top source IPs by connection volume across 2025.',
+    sql: `SELECT ip, COUNT(*) AS hits\nFROM connections\nWHERE ts >= '2025-01-01' AND ts < '2026-01-01'\nGROUP BY ip\nORDER BY hits DESC\nLIMIT 10;`
+  },
+  {
+    id: 'daily-traffic', label: 'Daily Traffic (2025)', color: 'success', breached: false,
+    explain: 'Connections per day in 2025 (trending shape).',
+    sql: `SELECT strftime('%Y-%m-%d', ts) AS day, COUNT(*) AS hits\nFROM connections\nWHERE ts >= '2025-01-01' AND ts < '2026-01-01'\nGROUP BY day\nORDER BY day;`
+  },
+  {
+    id: 'alerts-30', label: 'Alerts: Last 30 days', color: 'warning', breached: false,
+    explain: 'Recent alerts for quick triage.',
+    sql: `SELECT ip, COUNT(*) AS alerts_last_30d\nFROM alerts\nWHERE ts >= datetime('now','-30 day')\nGROUP BY ip\nORDER BY alerts_last_30d DESC\nLIMIT 20;`
+  },
+  {
+    id: 'bruteforce', label: 'Brute‑force Suspects', color: 'danger', breached: true,
+    explain: 'IPs with >= 50 hits in the last 7 days (possible brute‑force).',
+    sql: `SELECT ip, COUNT(*) AS attempts\nFROM connections\nWHERE ts >= datetime('now','-7 day')\nGROUP BY ip\nHAVING COUNT(*) >= 50\nORDER BY attempts DESC;`
+  },
+  {
+    id: 'per-user', label: 'Connections by User (2025)', color: 'secondary', breached: false,
+    explain: 'Application activity grouped by user across 2025.',
+    sql: `SELECT u.username, COUNT(c.id) AS connections_2025\nFROM users u\nLEFT JOIN connections c\n  ON u.id = c.user_id\n AND c.ts >= '2025-01-01' AND c.ts < '2026-01-01'\nGROUP BY u.username\nORDER BY connections_2025 DESC;`
+  },
+];
+
+const grid = document.getElementById('preset-grid');
+const queryEl = document.getElementById('query');
+const formEl  = document.getElementById('query-form');
+const autoRun = document.getElementById('auto-run');
+const copyBtn = document.getElementById('copy-sql');
+const clearBtn = document.getElementById('clear-sql');
+
+// Render buttons with custom tooltip bubbles showing SQL + explanation
+PRESETS.forEach(p => {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = `preset-btn btn ${p.color}${p.breached ? ' breached' : ''}`;
+  btn.textContent = p.label;
+  btn.setAttribute('data-sql', p.sql);
+
+  const tip = document.createElement('div');
+  tip.className = `tip ${p.color}`;
+  tip.innerHTML = `<strong>${p.label}</strong><div class="tip-desc">${p.explain}</div><pre>${p.sql.replace(/</g,'&lt;')}</pre>`;
+  btn.appendChild(tip);
+
+  btn.addEventListener('click', () => {
+    queryEl.value = p.sql;
+    if (autoRun.checked) {
+      formEl.submit();
+    }
+  });
+  grid.appendChild(btn);
+});
+
+copyBtn.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(queryEl.value || '');
+    copyBtn.classList.add('ok');
+    setTimeout(() => copyBtn.classList.remove('ok'), 1200);
+  } catch (_) {}
+});
+
+clearBtn.addEventListener('click', () => {
+  queryEl.value = '';
+});
+</script>
 {% endblock %}

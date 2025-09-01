@@ -97,3 +97,72 @@ table.data-table th {
 .query-form button:hover {
     background-color: #0056b3;
 }
+
+/* Buttons + presets */
+.btn {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: transform .06s ease, filter .2s ease, background-color .2s ease;
+    user-select: none;
+}
+.btn:active { transform: scale(0.98); }
+.btn.primary { background:#007bff; color:#fff; }
+.btn.secondary { background:#6c757d; color:#fff; }
+.btn.muted { background:#e0e0e0; color:#333; }
+.btn.info { background:#17a2b8; color:#fff; }
+.btn.success { background:#28a745; color:#fff; }
+.btn.warning { background:#ffc107; color:#333; }
+.btn.danger { background:#dc3545; color:#fff; }
+.btn.ok { filter: drop-shadow(0 0 6px rgba(40,167,69,.6)); }
+
+.actions { display:flex; align-items:center; gap:8px; margin-top:8px; }
+.actions .spacer { flex:1; }
+.toggle { font-size: 0.95rem; }
+
+.preset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+    margin: 8px 0 14px 0;
+}
+.preset-btn {
+    position: relative;
+    overflow: visible;
+}
+.preset-btn.breached {
+    box-shadow: 0 0 0 2px rgba(220,53,69,.35);
+}
+
+/* Custom tooltip */
+.tip {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: calc(100% + 8px);
+    z-index: 10;
+    width: 520px;
+    max-width: 70vw;
+    background: #fff;
+    border: 1px solid #ddd;
+    box-shadow: 0 10px 20px rgba(0,0,0,.12);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+.preset-btn:hover .tip { display:block; }
+.tip pre {
+    background: #f7f7f7;
+    border: 1px solid #eee;
+    padding: 8px;
+    border-radius: 6px;
+    overflow: auto;
+    max-height: 240px;
+}
+.tip .tip-desc { margin: 4px 0 8px 0; color:#333; }
+.tip.info { border-color:#17a2b8; }
+.tip.success { border-color:#28a745; }
+.tip.warning { border-color:#ffc107; }
+.tip.danger { border-color:#dc3545; }
+.tip.secondary { border-color:#6c757d; }
