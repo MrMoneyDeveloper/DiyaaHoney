@@ -1,18 +1,43 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+
+{% block title %}Live Hits - DiyaaHoney{% endblock %}
+
 {% block content %}
-<h1>Hits</h1>
-<table class="table">
-  <thead><tr><th>IP</th><th>Hits</th></tr></thead>
-  <tbody id="hits-body"></tbody>
-</table>
+<h1>Live Connection Hits</h1>
+<p>This page shows a continuously updating feed of simulated connection activity.  Every five seconds the
+latest data is fetched from the server and displayed below.</p>
+
+<table class="data-table">
+    <thead>
+        <tr><th>IP Address</th><th>Hits</th></tr>
+    </thead>
+    <tbody id="hits-body">
+        <!-- rows will be inserted here by JavaScript -->
+    </tbody>
+  </table>
+
 <script>
-async function loadHits(){
-  const res = await fetch("{{ url_for('dashboard.api_hits') }}");
-  const data = await res.json();
-  const body = document.getElementById("hits-body");
-  body.innerHTML = data.map(r => `<tr><td>${r.ip}</td><td>${r.hits}</td></tr>`).join("");
+function fetchHits() {
+    fetch('{{ url_for('dashboard.api_hits') }}')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('hits-body');
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                const tdIp = document.createElement('td');
+                tdIp.textContent = item.ip;
+                const tdHits = document.createElement('td');
+                tdHits.textContent = item.hits;
+                tr.appendChild(tdIp);
+                tr.appendChild(tdHits);
+                tbody.appendChild(tr);
+            });
+        })
+        .catch(err => console.error('Error fetching hits:', err));
 }
-loadHits();
-setInterval(loadHits, 5000);
+// initial load and periodic refresh every 5 seconds
+fetchHits();
+setInterval(fetchHits, 5000);
 </script>
 {% endblock %}

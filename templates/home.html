@@ -1,17 +1,49 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+
+{% block title %}Home - DiyaaHoney{% endblock %}
+
 {% block content %}
 <h1>Welcome to DiyaaHoney</h1>
-<p>The platform supports two business processes:</p>
+<p>
+    This project demonstrates a honeypot‑based intrusion detection system and a management dashboard for
+    incident response.  It captures connection attempts on a decoy service, analyzes attack patterns,
+    and stores events in a relational database.  The system also exposes a web interface for
+    monitoring activity, exploring data and performing administrative tasks.
+</p>
+
+<h2>Business Processes</h2>
+<ol>
+    <li><strong>Security Incident Detection &amp; Response</strong> – The honeypot listens on a predefined port
+        and records every inbound connection.  An intrusion detector analyzes the log and triggers
+        alerts when suspicious behaviour (e.g. repeated brute‑force attempts) is detected.  Alerts are
+        persisted to the database and delivered via e‑mail, MQTT and optional on‑device indicators.
+    </li>
+    <li><strong>System Administration &amp; Reporting</strong> – Administrators manage user accounts,
+        review accumulated connection data and alerts, run queries and purge outdated records.  The
+        dashboard supports searching and filtering, while the database GUI provides a safe read‑only
+        environment for exploring tables via SQL.
+    </li>
+</ol>
+
+<h2>Use Cases</h2>
 <ul>
-  <li>Security Incident Detection &amp; Response</li>
-  <li>System Administration &amp; Reporting</li>
+    <li><strong>Record Connection:</strong> Each time a client connects to the honeypot, the IP, port and
+        timestamp are stored in the <code>connections</code> table.</li>
+    <li><strong>Auto‑Alert on Brute‑Force:</strong> The intrusion detector counts failed attempts per
+        address; once a threshold is crossed it inserts an entry in <code>alerts</code> and sends
+        notifications.</li>
+    <li><strong>User Login:</strong> Users authenticate via the web interface; sessions are managed
+        securely with Flask‑Login and hashed passwords.</li>
+    <li><strong>Search Connections:</strong> Analysts can filter the dashboard by IP or date range to
+        investigate suspicious patterns.</li>
+    <li><strong>Purge Old Data:</strong> Administrators can remove obsolete connection records older than a
+        specified retention period; associated alerts are deleted automatically via cascading
+        constraints.</li>
 </ul>
-<p>Key use cases:</p>
-<ul>
-  <li>Record Connection</li>
-  <li>Auto-Alert on Brute-Force</li>
-  <li>User Login</li>
-  <li>Search Connections</li>
-  <li>Purge Old Data</li>
-</ul>
+
+<p>
+    Use the navigation bar above to explore the live hits feed, the statistical dashboard or the
+    database GUI.  Please log in with the default administrator account to access administrative
+    functions.
+    </p>
 {% endblock %}

@@ -21,6 +21,7 @@ from flask_login import (
     current_user,
 )
 from sqlalchemy import text, select, func
+from sqlalchemy import inspect as sa_inspect
 from db_utils import engine, connections
 
 bp = Blueprint("dashboard", __name__, template_folder="templates")
@@ -70,6 +71,7 @@ def logout():
 
 
 @bp.route("/home")
+@login_required
 def home():
     return render_template("home.html")
 
@@ -135,15 +137,22 @@ def forecast():
 @login_required
 def api_stats():
     ip = request.args.get("ip")
-    start = request.args.get("start")
-    end = request.args.get("end")
+    # Support both legacy (start/end) and new (start_date/end_date) params
+    start = request.args.get("start_date") or request.args.get("start")
+    end = request.args.get("end_date") or request.args.get("end")
     stmt = select(connections.c.ip, func.count().label("hits")).group_by(connections.c.ip)
     if ip:
         stmt = stmt.where(connections.c.ip == ip)
     if start:
-        stmt = stmt.where(connections.c.ts >= datetime.fromisoformat(start))
+        try:
+            stmt = stmt.where(connections.c.ts >= datetime.fromisoformat(start))
+        except ValueError:
+            pass
     if end:
-        stmt = stmt.where(connections.c.ts <= datetime.fromisoformat(end))
+        try:
+            stmt = stmt.where(connections.c.ts <= datetime.fromisoformat(end))
+        except ValueError:
+            pass
     with engine.connect() as conn:
         rows = conn.execute(stmt).all()
     return jsonify([{"ip": r.ip, "hits": r.hits} for r in rows])
@@ -158,26 +167,26 @@ def charts():
 @bp.route("/dbgui", methods=["GET", "POST"])
 @login_required
 def dbgui():
-    if current_user.role != "admin":
+    # Restrict to admin role
+    if getattr(current_user, "role", "viewer") != "admin":
         abort(403)
-    tables = ["users", "connections", "alerts"]
-    sql = request.form.get("sql")
-    rows = headers = None
-    if request.method == "POST" and sql:
-        sql = sql.strip()
-        if not sql.lower().startswith("select"):
-            flash("Only SELECT allowed", "danger")
-        else:
-            if "limit" not in sql.lower():
-                sql += " LIMIT 100"
-            try:
-                with engine.connect() as conn:
-                    result = conn.execute(text(sql))
-                    headers = result.keys()
-                    rows = result.fetchall()
-            except Exception as e:
-                flash(str(e), "danger")
-    return render_template("dbgui.html", tables=tables, rows=rows, headers=headers, sql=sql or "")
+    # List tables via SQLAlchemy inspector
+    tables = sa_inspect(engine).get_table_names()
+    query = None
+    rows = None
+    if request.method == "POST":
+        query = (request.form.get("query") or "").strip()
+        if query:
+            if query.lower().startswith("select"):
+                try:
+                    with engine.connect() as conn:
+                        result = conn.execute(text(query))
+                        rows = result.mappings().fetchmany(100)
+                except Exception as ex:
+                    flash(f"Error executing query: {ex}", "error")
+            else:
+                flash("Only SELECT statements are allowed.", "error")
+    return render_template("dbgui.html", tables=tables, rows=rows, query=query)
 
 
 def create_app() -> Flask:

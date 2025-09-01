@@ -1,25 +1,48 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+
+{% block title %}Database GUI - DiyaaHoney{% endblock %}
+
 {% block content %}
-<h1>DB GUI</h1>
+<h1>DB GUI</h1>
+<p>This page allows administrators to inspect the underlying database.  The tables listed below
+represent the core entities of the system.  You can run read‑only <code>SELECT</code> queries using the
+form; results are limited to 100 rows.</p>
+
+<h2>Tables</h2>
 <ul>
-  {% for t in tables %}<li>{{ t }}</li>{% endfor %}
-</ul>
-<form method="post" class="mb-3">
-  <textarea name="sql" class="form-control" rows="3">{{ sql }}</textarea>
-  <button class="btn btn-primary mt-2" type="submit">Run</button>
-</form>
-{% if rows %}
-<table class="table table-striped">
-  <thead>
-    <tr>
-      {% for h in headers %}<th>{{ h }}</th>{% endfor %}
-    </tr>
-  </thead>
-  <tbody>
-    {% for row in rows %}
-    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+    {% for tbl in tables %}
+        <li>{{ tbl }}</li>
     {% endfor %}
-  </tbody>
-</table>
+  </ul>
+
+<form method="post" class="query-form">
+    <textarea name="query" rows="6" cols="80" placeholder="SELECT * FROM connections LIMIT 10">{{ query or '' }}</textarea><br/>
+    <button type="submit">Run</button>
+  </form>
+
+{% if rows is not none %}
+    <h2>Results</h2>
+    {% if rows %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    {% for col in rows[0].keys() %}
+                        <th>{{ col }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                    <tr>
+                        {% for cell in row.values() %}
+                            <td>{{ cell }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No rows returned.</p>
+    {% endif %}
 {% endif %}
 {% endblock %}

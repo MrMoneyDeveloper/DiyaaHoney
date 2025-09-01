@@ -1,6 +1,90 @@
 {% extends 'base.html' %}
+
+{% block title %}Statistics - DiyaaHoney{% endblock %}
+
+{% block head_scripts %}
+    <!-- Load Chart.js only on this page -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
 {% block content %}
-<canvas id="ipChart" width="400" height="200"></canvas>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="{{ url_for('static', filename='charts.js') }}"></script>
+<h1>Connection Statistics</h1>
+<p>Use the form below to filter statistics by IP address and date range.  Submit the form to update
+the chart.  Leave fields blank to see all data.</p>
+
+<form id="filter-form" class="filter-form">
+    <label for="ip">IP Address:</label>
+    <input type="text" id="ip" name="ip" placeholder="e.g. 127.0.0.1">
+    <label for="start_date">Start Date:</label>
+    <input type="date" id="start_date" name="start_date">
+    <label for="end_date">End Date:</label>
+    <input type="date" id="end_date" name="end_date">
+    <button type="submit">Apply</button>
+  </form>
+
+<canvas id="statsChart" width="600" height="350"></canvas>
+
+<script>
+const ctx = document.getElementById('statsChart').getContext('2d');
+let chart;
+
+function fetchStats(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    fetch('{{ url_for('dashboard.api_stats') }}' + (query ? ('?' + query) : ''))
+        .then(response => response.json())
+        .then(data => {
+            const labels = data.map(item => item.ip);
+            const hits   = data.map(item => item.hits);
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Hits',
+                        data: hits
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Hits'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'IP Address'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Hits per IP'
+                        }
+                    }
+                }
+            });
+        })
+        .catch(err => console.error('Error fetching stats:', err));
+}
+
+document.getElementById('filter-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+    const formData = new FormData(this);
+    const params = {};
+    for (const [key, value] of formData.entries()) {
+        if (value) params[key] = value;
+    }
+    fetchStats(params);
+});
+
+// initial load
+fetchStats();
+</script>
 {% endblock %}
