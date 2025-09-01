@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Hits</h1>
+<table class="table">
+  <thead><tr><th>IP</th><th>Hits</th></tr></thead>
+  <tbody id="hits-body"></tbody>
+</table>
+<script>
+async function loadHits(){
+  const res = await fetch("{{ url_for('dashboard.api_hits') }}");
+  const data = await res.json();
+  const body = document.getElementById("hits-body");
+  body.innerHTML = data.map(r => `<tr><td>${r.ip}</td><td>${r.hits}</td></tr>`).join("");
+}
+loadHits();
+setInterval(loadHits, 5000);
+</script>
+{% endblock %}

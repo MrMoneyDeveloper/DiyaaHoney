@@ -1,4 +1,6 @@
 import os
+import random
+from datetime import datetime
 from flask import (
     Blueprint,
     Flask,
@@ -67,6 +69,27 @@ def logout():
     return redirect(url_for("dashboard.login"))
 
 
+@bp.route("/home")
+def home():
+    return render_template("home.html")
+
+
+@bp.route("/api/hits")
+@login_required
+def api_hits():
+    data = [
+        {"ip": f"192.168.1.{random.randint(1,254)}", "hits": random.randint(1,100)}
+        for _ in range(5)
+    ]
+    return jsonify(data)
+
+
+@bp.route("/hits")
+@login_required
+def hits():
+    return render_template("hits.html")
+
+
 @bp.route("/")
 @login_required
 def dashboard():
@@ -102,16 +125,28 @@ def dashboard():
     return render_template("dashboard.html", rows=rows, user=current_user)
 
 
-@bp.route("/stats")
+@bp.route("/dashboard/forecast")
 @login_required
-def stats():
-    stmt = (
-        select(connections.c.ip, func.count().label("hits"))
-        .group_by(connections.c.ip)
-    )
+def forecast():
+    return render_template("forecast.html")
+
+
+@bp.route("/api/stats")
+@login_required
+def api_stats():
+    ip = request.args.get("ip")
+    start = request.args.get("start")
+    end = request.args.get("end")
+    stmt = select(connections.c.ip, func.count().label("hits")).group_by(connections.c.ip)
+    if ip:
+        stmt = stmt.where(connections.c.ip == ip)
+    if start:
+        stmt = stmt.where(connections.c.ts >= datetime.fromisoformat(start))
+    if end:
+        stmt = stmt.where(connections.c.ts <= datetime.fromisoformat(end))
     with engine.connect() as conn:
         rows = conn.execute(stmt).all()
-    return jsonify([{"ip": row.ip, "hits": row.hits} for row in rows])
+    return jsonify([{"ip": r.ip, "hits": r.hits} for r in rows])
 
 
 @bp.route("/charts")
@@ -120,22 +155,29 @@ def charts():
     return render_template("charts.html")
 
 
-@bp.route("/query", methods=["GET", "POST"])
+@bp.route("/dbgui", methods=["GET", "POST"])
 @login_required
-def query():
+def dbgui():
     if current_user.role != "admin":
         abort(403)
+    tables = ["users", "connections", "alerts"]
     sql = request.form.get("sql")
     rows = headers = None
     if request.method == "POST" and sql:
-        try:
-            with engine.connect() as conn:
-                result = conn.execute(text(sql))
-                headers = result.keys()
-                rows = result.fetchall()
-        except Exception as e:
-            flash(str(e), "danger")
-    return render_template("query.html", rows=rows, headers=headers, sql=sql or "")
+        sql = sql.strip()
+        if not sql.lower().startswith("select"):
+            flash("Only SELECT allowed", "danger")
+        else:
+            if "limit" not in sql.lower():
+                sql += " LIMIT 100"
+            try:
+                with engine.connect() as conn:
+                    result = conn.execute(text(sql))
+                    headers = result.keys()
+                    rows = result.fetchall()
+            except Exception as e:
+                flash(str(e), "danger")
+    return render_template("dbgui.html", tables=tables, rows=rows, headers=headers, sql=sql or "")
 
 
 def create_app() -> Flask:
