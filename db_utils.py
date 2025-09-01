@@ -2,8 +2,20 @@ import os
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime, ForeignKey, text
+import bcrypt
+from sqlalchemy import (
+    create_engine,
+    MetaData,
+    Table,
+    Column,
+    Integer,
+    String,
+    DateTime,
+    ForeignKey,
+    text,
+)
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///diyaa.db")
 engine: Engine = create_engine(DATABASE_URL)
@@ -37,7 +49,47 @@ alerts = Table(
     Column("ts", DateTime, nullable=False, default=datetime.utcnow),
 )
 
-metadata.create_all(engine)
+
+def init_db(verbose: bool = False) -> None:
+    """Ensure database exists and has a default admin user.
+
+    If the connection fails, a new database file is created along with the
+    required tables and a default admin account.
+    """
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except OperationalError:
+        # If the database does not exist, create it
+        pass
+
+    metadata.create_all(engine)
+
+    default_username = os.getenv("ADMIN_USER", "admin")
+    default_password = os.getenv("ADMIN_PASS", "admin")
+
+    with engine.begin() as conn:
+        row = conn.execute(
+            users.select().where(users.c.username == default_username)
+        ).fetchone()
+        if not row:
+            hashed = bcrypt.hashpw(
+                default_password.encode(), bcrypt.gensalt()
+            ).decode()
+            conn.execute(
+                users.insert().values(
+                    username=default_username,
+                    password=hashed,
+                    role="admin",
+                )
+            )
+            if verbose:
+                print(
+                    f"Created default admin user '{default_username}' with password '{default_password}'"
+                )
+        elif verbose:
+            print("Admin user already exists")
 
 
 def insert_connection(ip: str, port: int, ts: datetime, user_id: Optional[int] = None) -> None:
@@ -49,9 +101,7 @@ def insert_connection(ip: str, port: int, ts: datetime, user_id: Optional[int] =
 
 def insert_alert(ip: str, message: str, ts: datetime) -> None:
     with engine.begin() as conn:
-        conn.execute(
-            alerts.insert().values(ip=ip, message=message, ts=ts)
-        )
+        conn.execute(alerts.insert().values(ip=ip, message=message, ts=ts))
 
 
 __all__ = [
@@ -62,4 +112,8 @@ __all__ = [
     "connections",
     "alerts",
     "metadata",
+    "init_db",
 ]
+
+
+init_db()
