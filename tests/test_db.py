@@ -18,3 +18,21 @@ def test_insert_connection(monkeypatch, tmp_path):
         count = conn.execute(text("SELECT COUNT(*) FROM connections")).scalar()
 
     assert count == 10
+
+
+def test_init_db_idempotent(monkeypatch, tmp_path):
+    db_url = f"sqlite:///{tmp_path}/test.db"
+    monkeypatch.setenv("DATABASE_URL", db_url)
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
+    db_utils = importlib.import_module("db_utils")
+    importlib.reload(db_utils)
+
+    # init_db has already run once on import; calling again should not raise
+    db_utils.init_db()
+
+    with db_utils.engine.connect() as conn:
+        count = conn.execute(
+            text("SELECT COUNT(*) FROM users WHERE username='admin'")
+        ).scalar()
+
+    assert count == 1
