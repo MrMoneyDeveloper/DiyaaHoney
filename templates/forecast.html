@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Forecast</h1>
+<form id="filter-form" class="row g-3 mb-3">
+  <div class="col-md-3"><input type="text" name="ip" class="form-control" placeholder="IP"></div>
+  <div class="col-md-3"><input type="date" name="start" class="form-control"></div>
+  <div class="col-md-3"><input type="date" name="end" class="form-control"></div>
+  <div class="col-md-3"><button class="btn btn-primary" type="submit">Apply</button></div>
+</form>
+<canvas id="stats-chart"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctx = document.getElementById('stats-chart').getContext('2d');
+let chart = new Chart(ctx, {type:'bar', data:{labels:[], datasets:[{label:'Hits', data:[]}]} });
+async function updateChart(){
+  const formData = new FormData(document.getElementById('filter-form'));
+  const params = new URLSearchParams(formData).toString();
+  const res = await fetch(`{{ url_for('dashboard.api_stats') }}?${params}`);
+  const data = await res.json();
+  chart.data.labels = data.map(d => d.ip);
+  chart.data.datasets[0].data = data.map(d => d.hits);
+  chart.update();
+}
+document.getElementById('filter-form').addEventListener('submit', e => {
+  e.preventDefault();
+  updateChart();
+});
+updateChart();
+</script>
+{% endblock %}

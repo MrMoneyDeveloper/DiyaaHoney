@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>DB GUI</h1>
+<ul>
+  {% for t in tables %}<li>{{ t }}</li>{% endfor %}
+</ul>
+<form method="post" class="mb-3">
+  <textarea name="sql" class="form-control" rows="3">{{ sql }}</textarea>
+  <button class="btn btn-primary mt-2" type="submit">Run</button>
+</form>
+{% if rows %}
+<table class="table table-striped">
+  <thead>
+    <tr>
+      {% for h in headers %}<th>{{ h }}</th>{% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}
