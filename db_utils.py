@@ -15,7 +15,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.engine import Engine
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///diyaa.db")
 engine: Engine = create_engine(DATABASE_URL)
@@ -69,14 +69,13 @@ def init_db(verbose: bool = False) -> None:
     default_username = os.getenv("ADMIN_USER", "admin")
     default_password = os.getenv("ADMIN_PASS", "admin")
 
+    # Attempt to insert the default admin user in a single transaction.
+    # If another process inserts the same user concurrently, the UNIQUE
+    # constraint on the username will raise an IntegrityError which we can
+    # safely ignore.
+    hashed = bcrypt.hashpw(default_password.encode(), bcrypt.gensalt()).decode()
     with engine.begin() as conn:
-        row = conn.execute(
-            users.select().where(users.c.username == default_username)
-        ).fetchone()
-        if not row:
-            hashed = bcrypt.hashpw(
-                default_password.encode(), bcrypt.gensalt()
-            ).decode()
+        try:
             conn.execute(
                 users.insert().values(
                     username=default_username,
@@ -88,8 +87,9 @@ def init_db(verbose: bool = False) -> None:
                 print(
                     f"Created default admin user '{default_username}' with password '{default_password}'"
                 )
-        elif verbose:
-            print("Admin user already exists")
+        except IntegrityError:
+            if verbose:
+                print("Admin user already exists")
 
 
 def insert_connection(ip: str, port: int, ts: datetime, user_id: Optional[int] = None) -> None:
