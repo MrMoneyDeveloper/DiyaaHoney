@@ -27,12 +27,14 @@
   </thead>
   <tbody>
     {% for ip, port, ts, message in rows %}
-    <tr>
+    <tr class="{{ 'table-danger' if message else '' }}">
       <td>{{ ip }}</td>
       <td>{{ port }}</td>
       <td>{{ ts }}</td>
       <td>{{ message or '' }}</td>
     </tr>
+    {% else %}
+    <tr><td colspan="4" class="text-center">No connections found</td></tr>
     {% endfor %}
   </tbody>
 </table>
