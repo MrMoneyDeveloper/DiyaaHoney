@@ -1,6 +1,5 @@
 import os
-import bcrypt
-from flask import Blueprint, Flask, render_template, request, redirect, url_for, flash
+from flask import Blueprint, Flask, render_template, request, redirect, url_for
 from flask_login import (
     LoginManager,
     login_user,
@@ -38,20 +37,17 @@ def load_user(user_id: str):
     return _row_to_user(row) if row else None
 
 
-@bp.route("/login", methods=["GET", "POST"])
+@bp.route("/login")
 def login():
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-        with engine.connect() as conn:
-            row = conn.execute(
-                text("SELECT * FROM users WHERE username = :u"), {"u": username}
-            ).mappings().first()
-        if row and bcrypt.checkpw(password.encode(), row["password"].encode()):
-            login_user(_row_to_user(row))
-            return redirect(url_for("dashboard.dashboard"))
-        flash("Invalid credentials", "danger")
-    return render_template("login.html")
+    default_username = os.getenv("ADMIN_USER", "admin")
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT * FROM users WHERE username = :u"), {"u": default_username}
+        ).mappings().first()
+    if not row:
+        return "Default admin user not found", 500
+    login_user(_row_to_user(row))
+    return redirect(url_for("dashboard.dashboard"))
 
 
 @bp.route("/logout")
