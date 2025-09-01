@@ -9,6 +9,8 @@ import time
 import re
 import logging
 from alerts import send_email_alert, send_mqtt_alert, trigger_led
+from db_utils import insert_alert
+from datetime import datetime
 
 # ── CONFIGURATION ────────────────────────────────────────────────────────────
 THRESHOLD       = 3          # attempts before alert fires
@@ -70,6 +72,8 @@ class IntrusionDetector:
         for ip, total in self._count_attempts().items():
             if total >= self.threshold and ip not in self.alerted_ips:
                 msg = f"{total} failed attempts detected from {ip}"
+                now = datetime.utcnow()
+                insert_alert(ip, msg, now)
                 send_email_alert(msg)         # real email (alerts.py)
                 send_mqtt_alert(msg)          # stub / simulated MQTT
                 trigger_led(msg)              # stub / simulated LED/Buzzer
