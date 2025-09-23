@@ -14,6 +14,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     text,
+    Index,
 )
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError, OperationalError
@@ -40,6 +41,8 @@ connections = Table(
     Column("ts", DateTime, nullable=False, default=datetime.utcnow),
     Column("user_id", Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
 )
+Index("ix_connections_ts", connections.c.ts)
+Index("ix_connections_ip", connections.c.ip)
 
 alerts = Table(
     "alerts",
@@ -49,6 +52,8 @@ alerts = Table(
     Column("message", String, nullable=False),
     Column("ts", DateTime, nullable=False, default=datetime.utcnow),
 )
+Index("ix_alerts_ts", alerts.c.ts)
+Index("ix_alerts_ip", alerts.c.ip)
 
 
 def init_db(verbose: bool = False) -> None:

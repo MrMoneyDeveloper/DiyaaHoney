@@ -3,8 +3,8 @@
 {% block title %}Statistics - DiyaaHoney{% endblock %}
 
 {% block head_scripts %}
-    <!-- Load Chart.js only on this page -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Load Chart.js only on this page; defer to avoid blocking render -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -84,7 +84,7 @@ document.getElementById('filter-form').addEventListener('submit', function(event
     fetchStats(params);
 });
 
-// initial load
-fetchStats();
+// initial load after Chart.js is present
+window.addEventListener('load', () => fetchStats());
 </script>
 {% endblock %}

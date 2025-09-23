@@ -11,6 +11,7 @@ from flask import (
     jsonify,
     abort,
     flash,
+    make_response,
 )
 from flask_login import (
     LoginManager,
@@ -20,6 +21,10 @@ from flask_login import (
     UserMixin,
     current_user,
 )
+try:
+    from flask_compress import Compress
+except Exception:
+    Compress = None
 from sqlalchemy import text, select, func
 from sqlalchemy import inspect as sa_inspect
 from db_utils import engine, connections
@@ -83,7 +88,9 @@ def api_hits():
         {"ip": f"192.168.1.{random.randint(1,254)}", "hits": random.randint(1,100)}
         for _ in range(5)
     ]
-    return jsonify(data)
+    resp = make_response(jsonify(data))
+    resp.headers["Cache-Control"] = "no-store, max-age=0"
+    return resp
 
 
 @bp.route("/hits")
@@ -120,7 +127,8 @@ def dashboard():
                FROM connections c
                LEFT JOIN alerts a ON c.ip = a.ip
                %s
-               ORDER BY c.ts DESC""" % where
+               ORDER BY c.ts DESC
+               LIMIT 500""" % where
     )
     with engine.connect() as conn:
         rows = conn.execute(query, params).fetchall()
@@ -155,7 +163,9 @@ def api_stats():
             pass
     with engine.connect() as conn:
         rows = conn.execute(stmt).all()
-    return jsonify([{"ip": r.ip, "hits": r.hits} for r in rows])
+    resp = make_response(jsonify([{"ip": r.ip, "hits": r.hits} for r in rows]))
+    resp.headers["Cache-Control"] = "no-store, max-age=0"
+    return resp
 
 
 @bp.route("/charts")
@@ -192,10 +202,22 @@ def dbgui():
 def create_app() -> Flask:
     app = Flask(__name__)
     app.secret_key = os.getenv("SECRET_KEY", "devkey")
+    # Static caching + small JSON speedups
+    app.config.setdefault("SEND_FILE_MAX_AGE_DEFAULT", 60 * 60 * 24)  # 24h
+    app.config.setdefault("JSONIFY_PRETTYPRINT_REGULAR", False)
+    app.config.setdefault("TEMPLATES_AUTO_RELOAD", False)
     login_manager.init_app(app)
     app.register_blueprint(bp)
+    # Enable gzip/brotli if available
+    if Compress is not None:
+        try:
+            Compress(app)
+        except Exception:
+            pass
     return app
 
 
 if __name__ == "__main__":
-    create_app().run(debug=True)
+    # For a snappier dev experience, disable reloader and debug unless explicitly enabled
+    debug = os.getenv("FLASK_DEBUG", "0") == "1"
+    create_app().run(debug=debug, use_reloader=False, threaded=True)

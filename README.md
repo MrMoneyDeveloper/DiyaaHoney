@@ -32,3 +32,11 @@ automatically with these credentials.
 ### Other scripts
 - `generate_fake_hits.sh` – send 10 test connections
 - `tests/test_db.py` – run with `pytest`
+
+## Performance tips
+
+- Compression: flask-compress is included in requirements.txt and is auto-enabled if installed.
+- Stable dev runs: disable reloader and debug for consistent timings: FLASK_DEBUG=0 python dashboard.py
+- Static caching: enabled for 24h; after CSS/JS changes, hard-refresh or bust cache.
+- APIs: send Cache-Control: no-store to avoid stale results for live feeds.
+

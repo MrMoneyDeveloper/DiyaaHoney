@@ -37,7 +37,9 @@ function fetchHits() {
         .catch(err => console.error('Error fetching hits:', err));
 }
 // initial load and periodic refresh every 5 seconds
-fetchHits();
-setInterval(fetchHits, 5000);
+window.addEventListener('load', () => {
+  fetchHits();
+  setInterval(fetchHits, 5000);
+});
 </script>
 {% endblock %}
