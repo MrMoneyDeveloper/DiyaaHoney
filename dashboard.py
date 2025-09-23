@@ -328,7 +328,7 @@ def create_app() -> Flask:
                 asset_versions[filename] = version
             return url_for('static', filename=filename, v=version)
 
-        return {"asset_url": asset_url}
+        return {"asset_url": asset_url, "current_year": datetime.utcnow().year}
 
     # Enable gzip/brotli if available
     if Compress is not None:

@@ -1,45 +1,66 @@
 {% extends 'base.html' %}
-
 {% block title %}Live Hits - DiyaaHoney{% endblock %}
-
 {% block content %}
-<h1>Live Connection Hits</h1>
-<p>This page shows a continuously updating feed of simulated connection activity.  Every five seconds the
-latest data is fetched from the server and displayed below.</p>
+<div class="card shadow-sm border-0 bg-body-tertiary">
+  <div class="card-body">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+      <div>
+        <h1 class="h4 mb-1">Live connection hits</h1>
+        <p class="text-body-secondary mb-0">Data refreshes every five seconds to highlight active probing hosts.</p>
+      </div>
+      <button class="btn btn-outline-light btn-sm" id="refreshHits" type="button">Refresh now</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-dark table-striped align-middle mb-0">
+        <thead>
+          <tr><th scope="col">IP address</th><th scope="col">Hits</th></tr>
+        </thead>
+        <tbody id="hits-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
 
-<table class="data-table">
-    <thead>
-        <tr><th>IP Address</th><th>Hits</th></tr>
-    </thead>
-    <tbody id="hits-body">
-        <!-- rows will be inserted here by JavaScript -->
-    </tbody>
-  </table>
+{% block body_scripts %}
+  {{ super() }}
+  <script>
+  (() => {
+    const endpoint = '{{ url_for('dashboard.api_hits') }}';
+    const tbody = document.getElementById('hits-body');
+    const refreshBtn = document.getElementById('refreshHits');
+    let timer;
 
-<script>
-function fetchHits() {
-    fetch('{{ url_for('dashboard.api_hits') }}')
-        .then(response => response.json())
-        .then(data => {
-            const tbody = document.getElementById('hits-body');
-            tbody.innerHTML = '';
-            data.forEach(item => {
-                const tr = document.createElement('tr');
-                const tdIp = document.createElement('td');
-                tdIp.textContent = item.ip;
-                const tdHits = document.createElement('td');
-                tdHits.textContent = item.hits;
-                tr.appendChild(tdIp);
-                tr.appendChild(tdHits);
-                tbody.appendChild(tr);
-            });
-        })
+    function render(rows) {
+      tbody.innerHTML = '';
+      rows.forEach(({ ip, hits }) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td class="font-monospace">${ip}</td><td>${hits}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function fetchHits() {
+      fetch(endpoint)
+        .then(resp => resp.json())
+        .then(render)
         .catch(err => console.error('Error fetching hits:', err));
-}
-// initial load and periodic refresh every 5 seconds
-window.addEventListener('load', () => {
-  fetchHits();
-  setInterval(fetchHits, 5000);
-});
-</script>
+    }
+
+    function startTimer() {
+      timer = setInterval(fetchHits, 5000);
+    }
+
+    refreshBtn.addEventListener('click', () => {
+      fetchHits();
+      clearInterval(timer);
+      startTimer();
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchHits();
+      startTimer();
+    });
+  })();
+  </script>
 {% endblock %}

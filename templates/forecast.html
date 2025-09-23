@@ -1,30 +1,101 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% block title %}Forecast - DiyaaHoney{% endblock %}
+{% block head_scripts %}
+    {{ super() }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
 {% block content %}
-<h1>Forecast</h1>
-<form id="filter-form" class="row g-3 mb-3">
-  <div class="col-md-3"><input type="text" name="ip" class="form-control" placeholder="IP"></div>
-  <div class="col-md-3"><input type="date" name="start" class="form-control"></div>
-  <div class="col-md-3"><input type="date" name="end" class="form-control"></div>
-  <div class="col-md-3"><button class="btn btn-primary" type="submit">Apply</button></div>
-</form>
-<canvas id="stats-chart"></canvas>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-const ctx = document.getElementById('stats-chart').getContext('2d');
-let chart = new Chart(ctx, {type:'bar', data:{labels:[], datasets:[{label:'Hits', data:[]}]} });
-async function updateChart(){
-  const formData = new FormData(document.getElementById('filter-form'));
-  const params = new URLSearchParams(formData).toString();
-  const res = await fetch(`{{ url_for('dashboard.api_stats') }}?${params}`);
-  const data = await res.json();
-  chart.data.labels = data.map(d => d.ip);
-  chart.data.datasets[0].data = data.map(d => d.hits);
-  chart.update();
-}
-document.getElementById('filter-form').addEventListener('submit', e => {
-  e.preventDefault();
-  updateChart();
-});
-updateChart();
-</script>
+<div class="row gy-4">
+  <div class="col-12 col-lg-4">
+    <div class="card shadow-sm border-0 bg-body-tertiary h-100">
+      <div class="card-body">
+        <h1 class="h4 mb-3">Forecast filters</h1>
+        <p class="text-body-secondary small">Project future activity using historical connection volume.</p>
+        <form id="filter-form" class="d-grid gap-3">
+          <div>
+            <label class="form-label" for="forecast-ip">IP address</label>
+            <input type="text" id="forecast-ip" name="ip" class="form-control" placeholder="Optional specific host">
+          </div>
+          <div>
+            <label class="form-label" for="forecast-start">Start date</label>
+            <input type="date" id="forecast-start" name="start" class="form-control">
+          </div>
+          <div>
+            <label class="form-label" for="forecast-end">End date</label>
+            <input type="date" id="forecast-end" name="end" class="form-control">
+          </div>
+          <button class="btn btn-primary" type="submit">Apply filters</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-8">
+    <div class="card shadow-sm border-0 bg-body-tertiary h-100">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h2 class="h5 mb-0">Forecasted hits</h2>
+          <span class="badge bg-warning-subtle text-warning-emphasis">Experimental</span>
+        </div>
+        <div class="flex-grow-1">
+          <canvas id="stats-chart" aria-label="Forecasted hits" role="img" style="min-height: 320px;"></canvas>
+        </div>
+        <p class="text-body-secondary small mt-3 mb-0">This page reuses live statistics; plug in your own predictive model as needed.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block body_scripts %}
+    {{ super() }}
+    <script>
+    (() => {
+      const form = document.getElementById('filter-form');
+      const chartEl = document.getElementById('stats-chart');
+      let chart = null;
+
+      function ensureChart() {
+        if (!chart) {
+          chart = new Chart(chartEl.getContext('2d'), {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Hits', data: [], borderColor: '#0d6efd', backgroundColor: 'rgba(13,110,253,0.2)', tension: 0.3 }] },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: { ticks: { color: '#adb5bd' } },
+                y: { beginAtZero: true, ticks: { color: '#adb5bd' } }
+              },
+              plugins: {
+                legend: { labels: { color: '#e9ecef' } }
+              }
+            }
+          });
+        }
+        return chart;
+      }
+
+      function updateChart() {
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData).toString();
+        fetch(`{{ url_for('dashboard.api_stats') }}?${params}`)
+          .then(resp => resp.json())
+          .then(data => {
+            const chartRef = ensureChart();
+            chartRef.data.labels = data.map(d => d.ip);
+            chartRef.data.datasets[0].data = data.map(d => d.hits);
+            chartRef.update();
+          })
+          .catch(err => console.error('Error fetching forecast stats:', err));
+      }
+
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        updateChart();
+      });
+
+      document.addEventListener('DOMContentLoaded', updateChart);
+    })();
+    </script>
 {% endblock %}

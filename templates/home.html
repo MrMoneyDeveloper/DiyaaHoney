@@ -1,49 +1,92 @@
 {% extends 'base.html' %}
-
 {% block title %}Home - DiyaaHoney{% endblock %}
-
 {% block content %}
-<h1>Welcome to DiyaaHoney</h1>
-<p>
-    This project demonstrates a honeypot‑based intrusion detection system and a management dashboard for
-    incident response.  It captures connection attempts on a decoy service, analyzes attack patterns,
-    and stores events in a relational database.  The system also exposes a web interface for
-    monitoring activity, exploring data and performing administrative tasks.
-</p>
+<section class="row gy-4">
+  <div class="col-12">
+    <div class="card shadow-lg border-0 bg-body-tertiary">
+      <div class="card-body p-4 p-lg-5">
+        <div class="row align-items-center g-4">
+          <div class="col-lg-7">
+            <h1 class="display-6 fw-semibold mb-3">Honeypot operations at a glance</h1>
+            <p class="lead text-body-secondary mb-4">
+              DiyaaHoney captures hostile probes, highlights risky patterns, and gives you tools to respond fast. Use the navigation to pivot between live hits, analytics, and administrative actions.
+            </p>
+            <div class="d-flex flex-wrap gap-3">
+              <a class="btn btn-primary" href="{{ url_for('dashboard.dashboard') }}">View connections</a>
+              <a class="btn btn-outline-light" href="{{ url_for('dashboard.charts') }}">Explore analytics</a>
+            </div>
+          </div>
+          <div class="col-lg-5">
+            <div class="bg-primary-subtle text-primary-emphasis rounded-4 p-4 h-100">
+              <h2 class="h5 fw-semibold">System status</h2>
+              <ul class="list-unstyled mt-3 mb-0 small">
+                <li class="d-flex justify-content-between align-items-center">
+                  <span>Honeypot listener</span>
+                  <span class="badge bg-success-subtle text-success-emphasis">Active</span>
+                </li>
+                <li class="d-flex justify-content-between align-items-center mt-2">
+                  <span>Intrusion detector</span>
+                  <span class="badge bg-success-subtle text-success-emphasis">Active</span>
+                </li>
+                <li class="d-flex justify-content-between align-items-center mt-2">
+                  <span>Dashboard</span>
+                  <span class="badge bg-success-subtle text-success-emphasis">Live</span>
+                </li>
+              </ul>
+              <p class="text-body-secondary small mt-3 mb-0">Status badges reflect configured services. Update this card to integrate with your monitoring stack.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-<h2>Business Processes</h2>
-<ol>
-    <li><strong>Security Incident Detection &amp; Response</strong> – The honeypot listens on a predefined port
-        and records every inbound connection.  An intrusion detector analyzes the log and triggers
-        alerts when suspicious behaviour (e.g. repeated brute‑force attempts) is detected.  Alerts are
-        persisted to the database and delivered via e‑mail, MQTT and optional on‑device indicators.
-    </li>
-    <li><strong>System Administration &amp; Reporting</strong> – Administrators manage user accounts,
-        review accumulated connection data and alerts, run queries and purge outdated records.  The
-        dashboard supports searching and filtering, while the database GUI provides a safe read‑only
-        environment for exploring tables via SQL.
-    </li>
-</ol>
+  <div class="col-12 col-xl-4">
+    <div class="card shadow-sm border-0 bg-body-tertiary h-100">
+      <div class="card-body">
+        <h3 class="h5">Business processes</h3>
+        <p class="text-body-secondary small">Key workflows supported by the honeypot deployment.</p>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item bg-transparent text-body">Security incident detection &amp; response</li>
+          <li class="list-group-item bg-transparent text-body">System administration &amp; reporting</li>
+          <li class="list-group-item bg-transparent text-body">Investigation &amp; threat hunting</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 
-<h2>Use Cases</h2>
-<ul>
-    <li><strong>Record Connection:</strong> Each time a client connects to the honeypot, the IP, port and
-        timestamp are stored in the <code>connections</code> table.</li>
-    <li><strong>Auto‑Alert on Brute‑Force:</strong> The intrusion detector counts failed attempts per
-        address; once a threshold is crossed it inserts an entry in <code>alerts</code> and sends
-        notifications.</li>
-    <li><strong>User Login:</strong> Users authenticate via the web interface; sessions are managed
-        securely with Flask‑Login and hashed passwords.</li>
-    <li><strong>Search Connections:</strong> Analysts can filter the dashboard by IP or date range to
-        investigate suspicious patterns.</li>
-    <li><strong>Purge Old Data:</strong> Administrators can remove obsolete connection records older than a
-        specified retention period; associated alerts are deleted automatically via cascading
-        constraints.</li>
-</ul>
-
-<p>
-    Use the navigation bar above to explore the live hits feed, the statistical dashboard or the
-    database GUI.  Please log in with the default administrator account to access administrative
-    functions.
-    </p>
+  <div class="col-12 col-xl-8">
+    <div class="card shadow-sm border-0 bg-body-tertiary h-100">
+      <div class="card-body">
+        <h3 class="h5">Common use cases</h3>
+        <div class="row row-cols-1 row-cols-md-2 g-3 mt-1">
+          <div class="col">
+            <div class="p-3 border border-dark-subtle rounded-3 h-100">
+              <h4 class="h6">Record connection</h4>
+              <p class="small text-body-secondary mb-0">Captured sessions log IP, port, and timestamp to the <code>connections</code> table.</p>
+            </div>
+          </div>
+          <div class="col">
+            <div class="p-3 border border-dark-subtle rounded-3 h-100">
+              <h4 class="h6">Auto alert on brute-force</h4>
+              <p class="small text-body-secondary mb-0">Detector escalates offenders and inserts alerts once thresholds are exceeded.</p>
+            </div>
+          </div>
+          <div class="col">
+            <div class="p-3 border border-dark-subtle rounded-3 h-100">
+              <h4 class="h6">Search connections</h4>
+              <p class="small text-body-secondary mb-0">Filter by IP or timeframe directly on the dashboard to spot probing campaigns.</p>
+            </div>
+          </div>
+          <div class="col">
+            <div class="p-3 border border-dark-subtle rounded-3 h-100">
+              <h4 class="h6">Purge old data</h4>
+              <p class="small text-body-secondary mb-0">Apply retention policies through database tooling or scheduled tasks.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 {% endblock %}

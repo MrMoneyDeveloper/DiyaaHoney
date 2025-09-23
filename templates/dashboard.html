@@ -1,50 +1,177 @@
 {% extends 'base.html' %}
+{% block title %}Connections - DiyaaHoney{% endblock %}
+
+{% block head_scripts %}
+    {{ super() }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
 {% block content %}
-<form class="row g-3 mb-3" method="get">
-  <div class="col-md-3">
-    <input type="text" class="form-control" name="ip" placeholder="IP" value="{{ request.args.get('ip','') }}">
+<div class="row gy-4">
+  <div class="col-12">
+    <div class="card shadow-sm border-0 bg-body-tertiary">
+      <div class="card-body">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-3 gap-3">
+          <div>
+            <h1 class="h4 mb-1">Connection Activity</h1>
+            <p class="text-body-secondary mb-0">Filter captured honeypot sessions and review alert status.</p>
+          </div>
+          <a class="btn btn-outline-light btn-sm" href="{{ url_for('dashboard.dashboard') }}">Reset filters</a>
+        </div>
+        <form class="row gy-3 gx-3 align-items-end" method="get">
+          <div class="col-md-5">
+            <label class="form-label" for="ip">IP address</label>
+            <input type="text" class="form-control" id="ip" name="ip" placeholder="Ex. 203.0.113.5" value="{{ request.args.get('ip','') }}">
+          </div>
+          <div class="col-md-4">
+            <div class="form-check mt-md-4 pt-md-2">
+              <input class="form-check-input" type="checkbox" id="alert_only" name="alert_only" value="1" {% if request.args.get('alert_only') %}checked{% endif %}>
+              <label class="form-check-label" for="alert_only">Alerts only</label>
+            </div>
+          </div>
+          <div class="col-md-3 d-grid">
+            <button class="btn btn-primary" type="submit">Filter</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
-  <div class="col-md-3">
-    <input type="date" class="form-control" name="start" value="{{ request.args.get('start','') }}">
-  </div>
-  <div class="col-md-3">
-    <input type="date" class="form-control" name="end" value="{{ request.args.get('end','') }}">
-  </div>
-  <div class="col-md-2 form-check align-self-center">
-    <input class="form-check-input" type="checkbox" name="alert_only" value="1" {% if request.args.get('alert_only') %}checked{% endif %}>
-    <label class="form-check-label">Alerts only</label>
-  </div>
-  <div class="col-md-1">
-    <button class="btn btn-secondary w-100" type="submit">Filter</button>
-  </div>
-</form>
 
-<input type="text" id="search" class="form-control mb-3" placeholder="Search...">
+  <div class="col-12 col-xxl-4">
+    <div class="card shadow-sm border-0 h-100 bg-body-tertiary">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Top IPs</h2>
+        <canvas id="connectionsChart" height="220" style="min-height: 260px;" aria-label="Connections per IP" role="img"></canvas>
+        <p class="text-body-secondary small mt-3 mb-0">Chart uses the filtered results shown in the table.</p>
+      </div>
+    </div>
+  </div>
 
-<table class="table table-striped" id="connTable">
-  <thead>
-    <tr><th>IP</th><th>Port</th><th>Timestamp</th><th>Alert</th></tr>
-  </thead>
-  <tbody>
-    {% for ip, port, ts, message in rows %}
-    <tr class="{{ 'table-danger' if message else '' }}">
-      <td>{{ ip }}</td>
-      <td>{{ port }}</td>
-      <td>{{ ts }}</td>
-      <td>{{ message or '' }}</td>
-    </tr>
-    {% else %}
-    <tr><td colspan="4" class="text-center">No connections found</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+  <div class="col-12 col-xxl-8">
+    <div class="card shadow-sm border-0 bg-body-tertiary">
+      <div class="card-body">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3">
+          <h2 class="h5 mb-0">Captured Connections</h2>
+          <input type="text" id="search" class="form-control form-control-sm w-100 w-lg-auto" placeholder="Quick search...">
+        </div>
+        <div class="table-responsive">
+          <table class="table table-dark table-striped table-hover align-middle" id="connTable">
+            <thead>
+              <tr><th scope="col">IP</th><th scope="col">Port</th><th scope="col">Timestamp</th><th scope="col">Alert</th></tr>
+            </thead>
+            <tbody>
+              {% for ip, port, ts, message in rows %}
+              <tr class="{% if message %}table-danger{% endif %}">
+                <td class="font-monospace">{{ ip }}</td>
+                <td>{{ port }}</td>
+                <td>{{ ts }}</td>
+                <td>{{ message or '' }}</td>
+              </tr>
+              {% else %}
+              <tr data-placeholder="1">
+                <td colspan="4" class="text-center text-body-secondary py-4">No connections found for the selected filters.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
 
-<script>
-document.getElementById('search').addEventListener('keyup', function() {
-  const q = this.value.toLowerCase();
-  document.querySelectorAll('#connTable tbody tr').forEach(function(row){
-    row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
-  });
-});
-</script>
+{% block body_scripts %}
+    {{ super() }}
+    <script>
+    (() => {
+      const searchInput = document.getElementById('search');
+      const tableRows = () => Array.from(document.querySelectorAll('#connTable tbody tr'));
+      const chartCanvas = document.getElementById('connectionsChart');
+      let chartInstance = null;
+
+      if (searchInput) {
+        searchInput.addEventListener('input', event => {
+          const query = event.target.value.toLowerCase();
+          tableRows().forEach(row => {
+            const matches = row.textContent.toLowerCase().includes(query);
+            row.style.display = matches ? '' : 'none';
+          });
+        });
+      }
+
+      function buildChartData() {
+        const counts = new Map();
+        tableRows()
+          .filter(row => !row.dataset.placeholder)
+          .forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length === 4) {
+              const ip = cells[0].textContent.trim();
+              if (ip) {
+                counts.set(ip, (counts.get(ip) || 0) + 1);
+              }
+            }
+          });
+        return counts;
+      }
+
+      function renderChart() {
+        if (!chartCanvas || typeof Chart === 'undefined') {
+          return;
+        }
+        const counts = buildChartData();
+        const labels = Array.from(counts.keys());
+        const data = Array.from(counts.values());
+
+        if (chartInstance) {
+          chartInstance.destroy();
+        }
+
+        if (labels.length === 0) {
+          chartCanvas.replaceWith(Object.assign(document.createElement('p'), {
+            className: 'text-body-secondary mb-0',
+            textContent: 'No data available to chart yet.'
+          }));
+          return;
+        }
+
+        chartInstance = new Chart(chartCanvas.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Connections',
+              data,
+              backgroundColor: '#0d6efd'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                ticks: { color: '#adb5bd' }
+              },
+              y: {
+                beginAtZero: true,
+                ticks: { color: '#adb5bd' }
+              }
+            },
+            plugins: {
+              legend: {
+                labels: { color: '#e9ecef' }
+              }
+            }
+          }
+        });
+      }
+
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        requestAnimationFrame(renderChart);
+      } else {
+        document.addEventListener('DOMContentLoaded', () => requestAnimationFrame(renderChart));
+      }
+    })();
+    </script>
 {% endblock %}

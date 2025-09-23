@@ -1,90 +1,132 @@
 {% extends 'base.html' %}
-
 {% block title %}Statistics - DiyaaHoney{% endblock %}
 
 {% block head_scripts %}
-    <!-- Load Chart.js only on this page; defer to avoid blocking render -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    {{ super() }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 {% endblock %}
 
 {% block content %}
-<h1>Connection Statistics</h1>
-<p>Use the form below to filter statistics by IP address and date range.  Submit the form to update
-the chart.  Leave fields blank to see all data.</p>
+<div class="row gy-4">
+  <div class="col-12 col-lg-4">
+    <div class="card shadow-sm border-0 bg-body-tertiary h-100">
+      <div class="card-body">
+        <h1 class="h4 mb-3">Filter Statistics</h1>
+        <p class="text-body-secondary small">
+          Apply filters to focus on a single IP or window of interest. Statistics update immediately after submitting.
+        </p>
+        <form id="filter-form" class="row gy-3">
+          <div class="col-12">
+            <label class="form-label" for="ip">IP address</label>
+            <input type="text" class="form-control" id="ip" name="ip" placeholder="Ex. 198.51.100.24">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" for="start_date">Start date</label>
+            <input type="date" class="form-control" id="start_date" name="start_date">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" for="end_date">End date</label>
+            <input type="date" class="form-control" id="end_date" name="end_date">
+          </div>
+          <div class="col-12 d-grid">
+            <button class="btn btn-primary" type="submit">Update chart</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
-<form id="filter-form" class="filter-form">
-    <label for="ip">IP Address:</label>
-    <input type="text" id="ip" name="ip" placeholder="e.g. 127.0.0.1">
-    <label for="start_date">Start Date:</label>
-    <input type="date" id="start_date" name="start_date">
-    <label for="end_date">End Date:</label>
-    <input type="date" id="end_date" name="end_date">
-    <button type="submit">Apply</button>
-  </form>
+  <div class="col-12 col-lg-8">
+    <div class="card shadow-sm border-0 bg-body-tertiary h-100">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h2 class="h5 mb-0">Hits per IP</h2>
+          <span class="badge bg-info-subtle text-info-emphasis">Live data</span>
+        </div>
+        <div class="flex-grow-1">
+          <canvas id="statsChart" aria-label="Hits per IP" role="img" style="min-height: 320px;"></canvas>
+        </div>
+        <p class="text-body-secondary small mt-3 mb-0">
+          Dataset limited to the top 20 rows for quick rendering. Refine the filters to zoom into specific hosts.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
 
-<canvas id="statsChart" width="600" height="350"></canvas>
+{% block body_scripts %}
+    {{ super() }}
+    <script>
+    (() => {
+      const form = document.getElementById('filter-form');
+      const ctx = document.getElementById('statsChart');
+      let chart;
 
-<script>
-const ctx = document.getElementById('statsChart').getContext('2d');
-let chart;
+      function render(data) {
+        const labels = data.map(item => item.ip);
+        const hits = data.map(item => item.hits);
 
-function fetchStats(params = {}) {
-    const query = new URLSearchParams(params).toString();
-    fetch('{{ url_for('dashboard.api_stats') }}' + (query ? ('?' + query) : ''))
-        .then(response => response.json())
-        .then(data => {
-            const labels = data.map(item => item.ip);
-            const hits   = data.map(item => item.hits);
-            if (chart) chart.destroy();
-            chart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Hits',
-                        data: hits
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Number of Hits'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'IP Address'
-                            }
-                        }
-                    },
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Hits per IP'
-                        }
-                    }
-                }
-            });
-        })
-        .catch(err => console.error('Error fetching stats:', err));
-}
+        if (chart) {
+          chart.destroy();
+        }
 
-document.getElementById('filter-form').addEventListener('submit', function(event) {
-    event.preventDefault();
-    const formData = new FormData(this);
-    const params = {};
-    for (const [key, value] of formData.entries()) {
-        if (value) params[key] = value;
-    }
-    fetchStats(params);
-});
+        chart = new Chart(ctx.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Hits',
+              data: hits,
+              backgroundColor: '#0d6efd'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                ticks: { color: '#adb5bd' },
+                title: { display: true, text: 'IP address', color: '#adb5bd' }
+              },
+              y: {
+                beginAtZero: true,
+                ticks: { color: '#adb5bd' },
+                title: { display: true, text: 'Hits', color: '#adb5bd' }
+              }
+            },
+            plugins: {
+              legend: {
+                labels: { color: '#e9ecef' }
+              }
+            }
+          }
+        });
+      }
 
-// initial load after Chart.js is present
-window.addEventListener('load', () => fetchStats());
-</script>
+      function fetchStats(params = {}) {
+        const query = new URLSearchParams(params).toString();
+        const url = '{{ url_for('dashboard.api_stats') }}' + (query ? `?${query}` : '');
+        return fetch(url)
+          .then(resp => resp.json())
+          .then(data => data.slice(0, 20));
+      }
+
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        const formData = new FormData(form);
+        const params = {};
+        for (const [key, value] of formData.entries()) {
+          if (value) {
+            params[key] = value;
+          }
+        }
+        fetchStats(params).then(render).catch(err => console.error('Error fetching stats:', err));
+      });
+
+      document.addEventListener('DOMContentLoaded', () => {
+        fetchStats().then(render).catch(err => console.error('Error fetching stats:', err));
+      });
+    })();
+    </script>
 {% endblock %}

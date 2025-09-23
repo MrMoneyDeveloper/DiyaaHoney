@@ -1,21 +1,26 @@
 {% extends 'base.html' %}
+{% block title %}Sign In - DiyaaHoney{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-4">
-    <form method="post">
-      <h2 class="mb-3">Login</h2>
-      <p class="mb-3 text-muted">Default credentials are pre-filled for quick access.</p>
-      <input type="hidden" name="next" value="{{ next }}">
-      <div class="mb-3">
-        <label class="form-label">Username</label>
-        <input name="username" class="form-control" required value="{{ username_value }}">
+<div class="row justify-content-center py-5">
+  <div class="col-md-6 col-lg-4">
+    <div class="card shadow-lg border-0 bg-body-tertiary">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-2 text-center">Welcome back</h1>
+        <p class="text-body-secondary text-center small mb-4">Default credentials are pre-filled so you can get started immediately.</p>
+        <form method="post" class="d-grid gap-3">
+          <input type="hidden" name="next" value="{{ next }}">
+          <div>
+            <label class="form-label" for="username">Username</label>
+            <input id="username" name="username" class="form-control" required value="{{ username_value }}">
+          </div>
+          <div>
+            <label class="form-label" for="password">Password</label>
+            <input id="password" type="password" name="password" class="form-control" required value="{{ password_value }}">
+          </div>
+          <button class="btn btn-primary" type="submit">Sign in</button>
+        </form>
       </div>
-      <div class="mb-3">
-        <label class="form-label">Password</label>
-        <input type="password" name="password" class="form-control" required value="{{ password_value }}">
-      </div>
-      <button class="btn btn-primary w-100" type="submit">Login</button>
-    </form>
+    </div>
   </div>
 </div>
 {% endblock %}

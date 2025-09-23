@@ -1,30 +1,40 @@
 {% extends 'base.html' %}
+{% block title %}Users - DiyaaHoney{% endblock %}
 {% block content %}
-<h2 class="mb-4">User Management</h2>
-<p class="mb-3 text-muted">
-  Use the <a href="{{ url_for('dashboard.create_user') }}">Create User</a> page to add new accounts.
-</p>
-<div class="card p-3 shadow-sm">
-  <h3 class="mb-3">Existing Users</h3>
-  <table class="table table-striped">
-    <thead>
-      <tr>
-        <th scope="col">Username</th>
-        <th scope="col">Role</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for user in users %}
-        <tr>
-          <td>{{ user.username }}</td>
-          <td>{{ user.role }}</td>
-        </tr>
-      {% else %}
-        <tr>
-          <td colspan="2">No users found.</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="row justify-content-between align-items-center mb-4 g-3">
+  <div class="col-auto">
+    <h1 class="h4 mb-0">User Management</h1>
+    <p class="text-body-secondary mb-0">Review existing accounts. Use the Create User link to onboard teammates.</p>
+  </div>
+  <div class="col-auto">
+    <a class="btn btn-primary" href="{{ url_for('dashboard.create_user') }}">Create user</a>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0 bg-body-tertiary">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-dark table-striped align-middle mb-0">
+        <thead>
+          <tr>
+            <th scope="col">Username</th>
+            <th scope="col">Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+            <tr>
+              <td class="fw-semibold">{{ user.username }}</td>
+              <td class="text-uppercase small text-body-secondary">{{ user.role }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="2" class="text-center text-body-secondary py-4">No users found.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endblock %}
