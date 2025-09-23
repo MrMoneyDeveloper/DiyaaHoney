@@ -4,13 +4,15 @@
   <div class="col-md-4">
     <form method="post">
       <h2 class="mb-3">Login</h2>
+      <p class="mb-3 text-muted">Default credentials are pre-filled for quick access.</p>
+      <input type="hidden" name="next" value="{{ next }}">
       <div class="mb-3">
         <label class="form-label">Username</label>
-        <input name="username" class="form-control" required>
+        <input name="username" class="form-control" required value="{{ username_value }}">
       </div>
       <div class="mb-3">
         <label class="form-label">Password</label>
-        <input type="password" name="password" class="form-control" required>
+        <input type="password" name="password" class="form-control" required value="{{ password_value }}">
       </div>
       <button class="btn btn-primary w-100" type="submit">Login</button>
     </form>

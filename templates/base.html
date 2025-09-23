@@ -13,7 +13,10 @@
             <a href="{{ url_for('dashboard.home') }}" class="nav-item">Home</a>
             <a href="{{ url_for('dashboard.hits') }}" class="nav-item">Hits</a>
             <a href="{{ url_for('dashboard.charts') }}" class="nav-item">Dashboard</a>
-            <a href="{{ url_for('dashboard.dbgui') }}" class="nav-item">DB GUI</a>
+            <a href="{{ url_for('dashboard.dbgui') }}" class="nav-item">DB GUI</a>
+            {% if current_user.is_authenticated and (current_user.role|default('viewer')) == 'admin' %}
+                <a href="{{ url_for('dashboard.manage_users') }}" class="nav-item">Users</a>
+            {% endif %}
             {% if current_user.is_authenticated %}
                 <a href="{{ url_for('dashboard.logout') }}" class="nav-item right">Logout</a>
             {% else %}
@@ -22,11 +25,11 @@
         </div>
     </nav>
     <main class="content">
-        {% with messages = get_flashed_messages() %}
+        {% with messages = get_flashed_messages(with_categories=True) %}
             {% if messages %}
                 <ul class="flash-messages">
-                    {% for message in messages %}
-                        <li>{{ message }}</li>
+                    {% for category, message in messages %}
+                        <li class="flash-{{ category }}">{{ message }}</li>
                     {% endfor %}
                 </ul>
             {% endif %}

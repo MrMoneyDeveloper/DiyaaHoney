@@ -1,6 +1,7 @@
 import os
 import random
 from datetime import datetime
+import bcrypt
 from flask import (
     Blueprint,
     Flask,
@@ -27,19 +28,31 @@ except Exception:
     Compress = None
 from sqlalchemy import text, select, func
 from sqlalchemy import inspect as sa_inspect
-from db_utils import engine, connections
+from sqlalchemy.exc import IntegrityError
+from db_utils import engine, connections, users
 
 bp = Blueprint("dashboard", __name__, template_folder="templates")
 login_manager = LoginManager()
 login_manager.login_view = "dashboard.login"
 
 
+def _safe_next_url() -> str:
+    candidate = request.args.get("next") or request.form.get("next")
+    if candidate and candidate.startswith("/"):
+        return candidate
+    return ""
+
+
 class User(UserMixin):
     def __init__(self, id: int, username: str, password: str, role: str) -> None:
         self.id = id
         self.username = username
         self.password = password
         self.role = role
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == 'admin'
 
 
 def _row_to_user(row) -> User:
@@ -55,17 +68,34 @@ def load_user(user_id: str):
     return _row_to_user(row) if row else None
 
 
-@bp.route("/login")
+@bp.route("/login", methods=["GET", "POST"])
 def login():
     default_username = os.getenv("ADMIN_USER", "admin")
-    with engine.connect() as conn:
-        row = conn.execute(
-            text("SELECT * FROM users WHERE username = :u"), {"u": default_username}
-        ).mappings().first()
-    if not row:
-        return "Default admin user not found", 500
-    login_user(_row_to_user(row))
-    return redirect(url_for("dashboard.dashboard"))
+    default_password = os.getenv("ADMIN_PASS", "admin")
+    next_url = _safe_next_url()
+    if request.method == "POST":
+        username_value = (request.form.get("username") or "").strip()
+        password_value = request.form.get("password") or ""
+        if username_value and password_value:
+            with engine.connect() as conn:
+                row = conn.execute(
+                    text("SELECT * FROM users WHERE username = :u"), {"u": username_value}
+                ).mappings().first()
+            if row and bcrypt.checkpw(password_value.encode(), row["password"].encode()):
+                login_user(_row_to_user(row))
+                flash("Logged in successfully.", "success")
+                target = next_url or url_for("dashboard.dashboard")
+                return redirect(target)
+        flash("Invalid username or password.", "error")
+    else:
+        username_value = default_username
+        password_value = default_password
+    return render_template(
+        "login.html",
+        username_value=username_value,
+        password_value=password_value,
+        next=next_url,
+    )
 
 
 @bp.route("/logout")
@@ -174,6 +204,55 @@ def charts():
     return render_template("charts.html")
 
 
+@bp.route("/users", methods=["GET", "POST"])
+@login_required
+def manage_users():
+    if not getattr(current_user, "is_admin", False):
+        abort(403)
+
+    if request.method == "POST":
+        form_username = (request.form.get("username") or "").strip()
+        form_password = request.form.get("password") or ""
+        form_role = (request.form.get("role") or "viewer").strip().lower()
+        allowed_roles = {"admin", "viewer"}
+        if form_role not in allowed_roles:
+            form_role = "viewer"
+
+        if not form_username or not form_password:
+            flash("Username and password are required.", "error")
+        else:
+            hashed = bcrypt.hashpw(form_password.encode(), bcrypt.gensalt()).decode()
+            try:
+                with engine.begin() as conn:
+                    conn.execute(
+                        users.insert().values(
+                            username=form_username,
+                            password=hashed,
+                            role=form_role,
+                        )
+                    )
+            except IntegrityError:
+                flash(f"User '{form_username}' already exists.", "error")
+            else:
+                flash(f"User '{form_username}' created.", "success")
+                return redirect(url_for("dashboard.manage_users"))
+    else:
+        form_username = ""
+        form_role = "viewer"
+
+    with engine.connect() as conn:
+        existing_users = conn.execute(
+            text("SELECT id, username, role FROM users ORDER BY username")
+        ).mappings().all()
+
+    return render_template(
+        "users.html",
+        users=existing_users,
+        form_username=form_username,
+        form_role=form_role,
+    )
+
+
 @bp.route("/dbgui", methods=["GET", "POST"])
 @login_required
 def dbgui():
@@ -221,3 +300,5 @@ if __name__ == "__main__":
     # For a snappier dev experience, disable reloader and debug unless explicitly enabled
     debug = os.getenv("FLASK_DEBUG", "0") == "1"
     create_app().run(debug=debug, use_reloader=False, threaded=True)
+
+
