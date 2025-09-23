@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5 col-lg-4">
+    <form method="post" class="card p-3 shadow-sm">
+      <h2 class="mb-3">Create User</h2>
+      <p class="mb-3 text-muted">Provide credentials for the new user.</p>
+      <div class="mb-3">
+        <label class="form-label" for="username">Username</label>
+        <input id="username" name="username" class="form-control" required value="{{ form_username }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="password">Password</label>
+        <input id="password" type="password" name="password" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="role">Role</label>
+        <select id="role" name="role" class="form-select">
+          <option value="viewer" {% if form_role == 'viewer' %}selected{% endif %}>viewer</option>
+          <option value="admin" {% if form_role == 'admin' %}selected{% endif %}>admin</option>
+        </select>
+      </div>
+      <button class="btn btn-primary w-100" type="submit">Create user</button>
+      <div class="text-center mt-3">
+        <a href="{{ url_for('dashboard.manage_users') }}">Back to users</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

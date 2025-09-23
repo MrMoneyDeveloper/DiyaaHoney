@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}DiyaaHoney{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ asset_url('styles.css') }}">
     {% block head_scripts %}{% endblock %}
 </head>
 <body>
@@ -16,6 +16,7 @@
             <a href="{{ url_for('dashboard.dbgui') }}" class="nav-item">DB GUI</a>
             {% if current_user.is_authenticated and (current_user.role|default('viewer')) == 'admin' %}
                 <a href="{{ url_for('dashboard.manage_users') }}" class="nav-item">Users</a>
+                <a href="{{ url_for('dashboard.create_user') }}" class="nav-item">Create User</a>
             {% endif %}
             {% if current_user.is_authenticated %}
                 <a href="{{ url_for('dashboard.logout') }}" class="nav-item right">Logout</a>

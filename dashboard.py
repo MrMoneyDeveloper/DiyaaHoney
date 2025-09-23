@@ -1,6 +1,8 @@
 import os
 import random
+import time
 from datetime import datetime
+from pathlib import Path
 import bcrypt
 from flask import (
     Blueprint,
@@ -41,8 +43,10 @@ def _safe_next_url() -> str:
     if candidate and candidate.startswith("/"):
         return candidate
     return ""
-
-
+
+
+
+
 class User(UserMixin):
     def __init__(self, id: int, username: str, password: str, role: str) -> None:
         self.id = id
@@ -204,11 +208,31 @@ def charts():
     return render_template("charts.html")
 
 
-@bp.route("/users", methods=["GET", "POST"])
+@bp.route("/users")
 @login_required
 def manage_users():
     if not getattr(current_user, "is_admin", False):
         abort(403)
+
+    with engine.connect() as conn:
+        existing_users = conn.execute(
+            text("SELECT id, username, role FROM users ORDER BY username")
+        ).mappings().all()
+
+    return render_template(
+        "users.html",
+        users=existing_users,
+    )
+
+
+@bp.route("/users/create", methods=["GET", "POST"])
+@login_required
+def create_user():
+    if not getattr(current_user, "is_admin", False):
+        abort(403)
+
+    form_username = ""
+    form_role = "viewer"
 
     if request.method == "POST":
         form_username = (request.form.get("username") or "").strip()
@@ -236,18 +260,9 @@ def manage_users():
             else:
                 flash(f"User '{form_username}' created.", "success")
                 return redirect(url_for("dashboard.manage_users"))
-    else:
-        form_username = ""
-        form_role = "viewer"
-
-    with engine.connect() as conn:
-        existing_users = conn.execute(
-            text("SELECT id, username, role FROM users ORDER BY username")
-        ).mappings().all()
 
     return render_template(
-        "users.html",
-        users=existing_users,
+        "user_create.html",
         form_username=form_username,
         form_role=form_role,
     )
@@ -280,13 +295,41 @@ def dbgui():
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    app.secret_key = os.getenv("SECRET_KEY", "devkey")
+    secret = os.getenv("SECRET_KEY")
+    if not secret:
+        secret = os.urandom(32)
+    app.secret_key = secret
     # Static caching + small JSON speedups
-    app.config.setdefault("SEND_FILE_MAX_AGE_DEFAULT", 60 * 60 * 24)  # 24h
+    if os.getenv("FLASK_DEBUG", "0") == "1":
+        app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+    else:
+        app.config.setdefault("SEND_FILE_MAX_AGE_DEFAULT", 60 * 60 * 24)  # 24h
     app.config.setdefault("JSONIFY_PRETTYPRINT_REGULAR", False)
     app.config.setdefault("TEMPLATES_AUTO_RELOAD", False)
     login_manager.init_app(app)
     app.register_blueprint(bp)
+
+    asset_versions = {}
+    static_folder = Path(app.static_folder) if app.static_folder else None
+
+    @app.context_processor
+    def inject_asset_url():
+        def asset_url(filename: str) -> str:
+            version = asset_versions.get(filename)
+            if version is None:
+                if static_folder:
+                    file_path = static_folder / filename
+                    if file_path.exists():
+                        version = str(int(file_path.stat().st_mtime))
+                    else:
+                        version = str(int(time.time()))
+                else:
+                    version = str(int(time.time()))
+                asset_versions[filename] = version
+            return url_for('static', filename=filename, v=version)
+
+        return {"asset_url": asset_url}
+
     # Enable gzip/brotli if available
     if Compress is not None:
         try:
@@ -300,5 +343,6 @@ if __name__ == "__main__":
     # For a snappier dev experience, disable reloader and debug unless explicitly enabled
     debug = os.getenv("FLASK_DEBUG", "0") == "1"
     create_app().run(debug=debug, use_reloader=False, threaded=True)
+
 
 

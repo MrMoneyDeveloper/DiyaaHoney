@@ -47,7 +47,7 @@ any time.
 
 ## Authentication
 - Default credentials are `admin` / `admin`. The login page loads with these values pre-filled so you can simply press **Login**.
-- Once signed in as an admin you can open <http://127.0.0.1:5000/users> (or the **Users** navigation link) to add new accounts. Newly created users can sign in with their chosen role immediately.
+- Once signed in as an admin you can review accounts at <http://127.0.0.1:5000/users> and add new ones from the **Create User** navigation link (<http://127.0.0.1:5000/users/create>). Newly created users can sign in with their chosen role immediately.
 
 ## Other scripts
 - `generate_fake_hits.sh` - send 10 test connections
